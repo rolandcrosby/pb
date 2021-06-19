@@ -17,7 +17,8 @@ func pbDataConformingTo(typeName: String) -> (conformingType: NSPasteboard.Paste
     guard let items = pb.pasteboardItems else {return nil}
     for item in items {
         for foundType in item.types {
-            if UTType(foundType.rawValue)!.conforms(to: desiredType) {
+            guard let foundTypeUTI = UTType(foundType.rawValue) else {continue}
+            if foundTypeUTI.conforms(to: desiredType) {
                 guard let data = item.data(forType: foundType) else {return nil}
                 return (conformingType: foundType, data: data)
             }
