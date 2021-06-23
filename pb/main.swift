@@ -9,7 +9,12 @@ import Foundation
 import AppKit.NSPasteboard
 import ArgumentParser
 import UniformTypeIdentifiers
-import System
+
+struct PB: ParsableCommand {
+    static var configuration = CommandConfiguration(
+        abstract: "Inspect and manipulate the macOS clipboard",
+        subcommands: [Types.self, Filter.self, Paste.self, Image.self, Text.self])
+}
 
 func pbDataConformingTo(typeName: String) -> (conformingType: NSPasteboard.PasteboardType, data: Data)? {
     let pb = NSPasteboard.general
@@ -37,12 +42,6 @@ func runFilter(typeName: String) throws {
         print("No data conforming to \(typeName) found on clipboard")
         throw ExitCode.failure
     }
-}
-
-struct PB: ParsableCommand {
-    static var configuration = CommandConfiguration(
-        abstract: "Inspect and manipulate the macOS clipboard",
-        subcommands: [Types.self, Filter.self, Image.self, Text.self])
 }
 
 struct Filter: ParsableCommand {
@@ -88,6 +87,28 @@ struct Types: ParsableCommand {
             for type in item.types {
                 print(type.rawValue)
             }
+        }
+    }
+}
+
+struct Paste: ParsableCommand {
+    static var configuration = CommandConfiguration(abstract: "Write the contents of the clipboard of the specified type to stdout")
+    
+    @Argument(help: "Type indicator to match, such as `public.plain-text`")
+    var desiredType: String
+    
+    func validate() throws {
+        if UTType(desiredType) == nil {
+            throw ValidationError("\(desiredType) is not a valid type indicator")
+        }
+    }
+    
+    mutating func run() throws {
+        if let (_, conformingData) = pbDataConformingTo(typeName: desiredType) {
+            FileHandle.standardOutput.write(conformingData)
+        } else {
+            print("No data of type \(desiredType) found on clipboard")
+            throw ExitCode.failure
         }
     }
 }
